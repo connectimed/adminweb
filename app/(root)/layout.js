@@ -6,8 +6,8 @@ import { AuthContextProvider } from "@/lib/AuthContext";
 const roboto = Roboto({ weight: "400", subsets: ["latin"], display: "swap" });
 
 export const metadata = {
-  title: "SkillsBot",
-  description: "Trade on Binance like a pro",
+  title: "IMEDConnect",
+  description: "Administration dashboard",
 };
 
 export default function RootLayout({ children }) {
