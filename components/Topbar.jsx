@@ -13,18 +13,9 @@ const Topbar = () => {
   const pathname = usePathname();
   const { userData, fetchUserData, firebaseUser, logOut } = UserAuth();
 
-  const menuItems = [
-    { label: "Dashboard", href: "/" },
-    { label: "Documentation", href: "/documentation" },
-  ];
+  if (!userData) return <></>;
 
-  function classNames(...classes) {
-    return classes.filter(Boolean).join(" ");
-  }
-
-  const handleSignOut = async () => {
-    logOut();
-  };
+  if (userData && userData.account_type !== "Admin") return <></>;
 
   return (
     <div className="sticky top-0 z-50 bg-white border-b border-slate-300">
