@@ -15,7 +15,7 @@ const Topbar = () => {
 
   if (!userData) return <></>;
 
-  if (userData && userData.account_type !== "Admin") return <></>;
+  if (userData && userData.user_type !== "Admin") return <></>;
 
   return (
     <div className="sticky top-0 z-50 bg-white border-b border-slate-300">

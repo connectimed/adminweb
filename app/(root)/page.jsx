@@ -12,7 +12,7 @@ export default function Home() {
 
   if (!userData) return <RingLoader />;
 
-  if (userData && userData.account_type !== "Admin") return <UnAuthorized />;
+  if (userData && userData.user_type !== "Admin") return <UnAuthorized />;
 
   return (
     <div className="container max-w-7xl mx-auto">
