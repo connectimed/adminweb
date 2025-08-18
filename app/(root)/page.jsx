@@ -5,6 +5,7 @@ import { UsersPanel } from "@/components/UsersPanel";
 import { ModulesPanel } from "@/components/ModulesPanel";
 import { ApplicationsPanel } from "@/components/ApplicationsPanel";
 import UnAuthorized from "@/components/UnAuthorized";
+import { ExaminationsPanel } from "@/components/ExaminationsPanel";
 
 export default function Home() {
   const { userData, logOut } = UserAuth();
@@ -24,7 +25,7 @@ export default function Home() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-8 mt-8">
         <ApplicationsPanel />
 
-        <ModulesPanel />
+        <ExaminationsPanel />
       </div>
     </div>
   );

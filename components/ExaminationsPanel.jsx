@@ -1,6 +1,5 @@
 import { UserAuth } from "@/lib/AuthContext";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -8,31 +7,26 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
-const userTypes = [
-  { label: "All Users", value: "All" },
-  { label: "Students", value: "Student" },
-  { label: "Mentors", value: "Mentor" },
-  { label: "Admins", value: "Admin" },
-];
-const genderTypes = [
-  { label: "All Genders", value: "All" },
-  { label: "Male", value: "Male" },
-  { label: "Female", value: "Female" },
+const moduleTypes = [{ label: "All Exams", value: "All" }];
+const sortTypes = [
+  { label: "Time Created", value: "Time" },
+  { label: "Questions Count", value: "Students" },
+  { label: "Examinee Count", value: "Topics" },
 ];
 
-export const ApplicationsPanel = () => {
+export const ExaminationsPanel = () => {
   const { userData, logOut } = UserAuth();
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState("All");
   const [selectedGender, setSelectedGender] = useState("All");
-  const [users, setUsers] = useState([]);
+  const [exams, setExams] = useState([]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchModules = async () => {
       setLoading(true);
 
       try {
-        const usersCollection = collection(db, "Users");
+        const usersCollection = collection(db, "Modules");
 
         // Build arrays for 'in' queries
         const typesArray =
@@ -48,8 +42,8 @@ export const ApplicationsPanel = () => {
         // Construct query
         const usersQuery = query(
           usersCollection,
-          where("user_type", "in", typesArray),
-          where("user_sex", "in", genderArray)
+          where("module_has_exam", "==", true)
+          // where("user_sex", "in", genderArray)
         );
 
         const querySnapshot = await getDocs(usersQuery);
@@ -58,49 +52,50 @@ export const ApplicationsPanel = () => {
           ...doc.data(),
         }));
 
-        setUsers(usersData);
+        setExams(usersData);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching exams:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchModules();
   }, [selectedType, selectedGender]);
 
-  const downloadUsers = () => {
-    if (!users || users.length === 0) {
-      alert("No users to download");
+  const downloadModules = () => {
+    if (!exams || exams.length === 0) {
+      alert("No exams to download");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Map users to only the required fields
-      const mappedUsers = users.map((u) => ({
-        "Full Name": u.user_full_name || "",
-        "User Type": u.user_type || "",
-        "Phone Number": u.user_phone || "",
-        Sex: u.user_sex || "",
-        "Birth Date": u.user_birth_date
-          ? new Date(u.user_birth_date.seconds * 1000).toLocaleDateString(
-              "en-GB",
-              { day: "2-digit", month: "short", year: "numeric" }
-            )
+      // 1. Map exams to only the required fields
+      const mappedModules = exams.map((u) => ({
+        "Exam Title": u.module_exam_title || "",
+        Instructions: u.module_exam_instructions || "",
+        Duration: u.module_exam_duration || "",
+        "Created Date": u.module_exam_submitted_time
+          ? new Date(
+              u.module_exam_submitted_time.seconds * 1000
+            ).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
           : "",
-        "Marital Status": u.user_marital_status || "",
-        Region: u.user_region || "",
-        District: u.user_district || "",
+        "Number Of Questions": u.module_exam_total_questions || "",
+        "Students taking exam": u.module_students_taken_exam.length || "",
       }));
 
-      // 2. Convert mapped users to worksheet
-      const worksheet = XLSX.utils.json_to_sheet(mappedUsers);
+      // 2. Convert mapped exams to worksheet
+      const worksheet = XLSX.utils.json_to_sheet(mappedModules);
 
       // 3. Create a workbook and append worksheet
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Modules");
 
       // 4. Write workbook to binary
       const excelBuffer = XLSX.write(workbook, {
@@ -112,25 +107,26 @@ export const ApplicationsPanel = () => {
       const data = new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      saveAs(data, `users_export_${new Date().toISOString()}.xlsx`);
+      saveAs(data, `exams_export.xlsx`);
     } catch (error) {
-      console.error("Error exporting users:", error);
+      console.error("Error exporting exams:", error);
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <div className="px-4 py-2 rounded-2xl bg-gray-300 tracking-wide">
       <div className="flex justify-between items-center">
         <div>
-          <p className="text-md font-bold">Applications panel</p>
+          <p className="text-md font-bold">Examinations panel</p>
           <p className="text-sm font-light">
-            Define the type of users you want to export
+            Define the examination data to export
           </p>
         </div>
         <div
           className="bg-white p-1 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer"
-          onClick={downloadUsers} // Toggle edit on click
+          onClick={downloadModules} // Toggle edit on click
         >
           <ArrowDownTrayIcon className="h-4 w-4" />
         </div>
@@ -140,10 +136,10 @@ export const ApplicationsPanel = () => {
 
       <div className="mt-2">
         <span className="text-sm font-medium text-gray-700">
-          Select user type
+          Select examination type
         </span>
         <div className="mt-1 flex flex-wrap gap-2">
-          {userTypes.map((type) => (
+          {moduleTypes.map((type) => (
             <button
               key={type.value}
               type="button"
@@ -162,11 +158,9 @@ export const ApplicationsPanel = () => {
       </div>
 
       <div className="mt-2">
-        <span className="text-sm font-medium text-gray-700">
-          Select gender type
-        </span>
+        <span className="text-sm font-medium text-gray-700">Sort exams by</span>
         <div className="mt-1 flex flex-wrap gap-2">
-          {genderTypes.map((type) => (
+          {sortTypes.map((type) => (
             <button
               key={type.value}
               type="button"
@@ -188,7 +182,7 @@ export const ApplicationsPanel = () => {
         <InformationCircleIcon className="h-5 w-5" />
 
         <p className=" text-black text-sm tracking-wide font-light">
-          You are about to export {users.length} users.
+          You are about to export {exams.length} exams.
         </p>
       </div>
     </div>

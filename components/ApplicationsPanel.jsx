@@ -9,15 +9,15 @@ import { db } from "@/lib/firebase";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
 const userTypes = [
-  { label: "All Users", value: "All" },
+  { label: "All", value: "All" },
   { label: "Students", value: "Student" },
   { label: "Mentors", value: "Mentor" },
-  { label: "Admins", value: "Admin" },
 ];
-const genderTypes = [
-  { label: "All Genders", value: "All" },
-  { label: "Male", value: "Male" },
-  { label: "Female", value: "Female" },
+const applicationStatuses = [
+  { label: "All", value: "All" },
+  { label: "Approved", value: "Approved" },
+  { label: "Rejected", value: "Rejected" },
+  { label: "Pending", value: "Pending" },
 ];
 
 export const ApplicationsPanel = () => {
@@ -42,14 +42,14 @@ export const ApplicationsPanel = () => {
 
         const genderArray =
           selectedGender && selectedGender !== "All"
-            ? [selectedGender]
-            : ["Male", "Female"]; // all genders
+            ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+            : ["10", "9"]; // all genders
 
         // Construct query
         const usersQuery = query(
           usersCollection,
           where("user_type", "in", typesArray),
-          where("user_sex", "in", genderArray)
+          where("user_profile_setup_step", "in", genderArray)
         );
 
         const querySnapshot = await getDocs(usersQuery);
@@ -80,19 +80,19 @@ export const ApplicationsPanel = () => {
     try {
       // 1. Map users to only the required fields
       const mappedUsers = users.map((u) => ({
-        "Full Name": u.user_full_name || "",
-        "User Type": u.user_type || "",
-        "Phone Number": u.user_phone || "",
+        "Applicant Name": u.user_full_name || "",
+        "Application Type": u.user_type || "",
+        "Application Phone": u.user_phone || "",
+        "Application Status":
+          u.user_profile_setup_step == "10" ? "Approved" : "Pending" || "",
         Sex: u.user_sex || "",
-        "Birth Date": u.user_birth_date
-          ? new Date(u.user_birth_date.seconds * 1000).toLocaleDateString(
+        "Application Date": u.user_creation_date
+          ? new Date(u.user_creation_date.seconds * 1000).toLocaleDateString(
               "en-GB",
               { day: "2-digit", month: "short", year: "numeric" }
             )
           : "",
-        "Marital Status": u.user_marital_status || "",
-        Region: u.user_region || "",
-        District: u.user_district || "",
+        Location: u.user_location_address || "",
       }));
 
       // 2. Convert mapped users to worksheet
@@ -112,20 +112,21 @@ export const ApplicationsPanel = () => {
       const data = new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      saveAs(data, `users_export_${new Date().toISOString()}.xlsx`);
+      saveAs(data, `applications_export.xlsx`);
     } catch (error) {
       console.error("Error exporting users:", error);
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <div className="px-4 py-2 rounded-2xl bg-gray-300 tracking-wide">
       <div className="flex justify-between items-center">
         <div>
           <p className="text-md font-bold">Applications panel</p>
           <p className="text-sm font-light">
-            Define the type of users you want to export
+            Define applications data you want to export
           </p>
         </div>
         <div
@@ -140,7 +141,7 @@ export const ApplicationsPanel = () => {
 
       <div className="mt-2">
         <span className="text-sm font-medium text-gray-700">
-          Select user type
+          Select applicant type
         </span>
         <div className="mt-1 flex flex-wrap gap-2">
           {userTypes.map((type) => (
@@ -163,10 +164,10 @@ export const ApplicationsPanel = () => {
 
       <div className="mt-2">
         <span className="text-sm font-medium text-gray-700">
-          Select gender type
+          Select application status
         </span>
         <div className="mt-1 flex flex-wrap gap-2">
-          {genderTypes.map((type) => (
+          {applicationStatuses.map((type) => (
             <button
               key={type.value}
               type="button"
@@ -188,7 +189,7 @@ export const ApplicationsPanel = () => {
         <InformationCircleIcon className="h-5 w-5" />
 
         <p className=" text-black text-sm tracking-wide font-light">
-          You are about to export {users.length} users.
+          You are about to export {users.length} applications.
         </p>
       </div>
     </div>

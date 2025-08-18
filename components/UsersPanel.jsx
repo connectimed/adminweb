@@ -9,13 +9,13 @@ import { db } from "@/lib/firebase";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
 const userTypes = [
-  { label: "All Users", value: "All" },
+  { label: "All", value: "All" },
   { label: "Students", value: "Student" },
   { label: "Mentors", value: "Mentor" },
   { label: "Admins", value: "Admin" },
 ];
 const genderTypes = [
-  { label: "All Genders", value: "All" },
+  { label: "Both", value: "All" },
   { label: "Male", value: "Male" },
   { label: "Female", value: "Female" },
 ];
@@ -80,8 +80,8 @@ export const UsersPanel = () => {
     try {
       // 1. Map users to only the required fields
       const mappedUsers = users.map((u) => ({
-        "Full Name": u.user_full_name || "",
-        "User Type": u.user_type || "",
+        Name: u.user_full_name || "",
+        Type: u.user_type || "",
         "Phone Number": u.user_phone || "",
         Sex: u.user_sex || "",
         "Birth Date": u.user_birth_date
@@ -90,9 +90,17 @@ export const UsersPanel = () => {
               { day: "2-digit", month: "short", year: "numeric" }
             )
           : "",
-        "Marital Status": u.user_marital_status || "",
-        Region: u.user_region || "",
-        District: u.user_district || "",
+        "Marital Status": u.user_marital_status || "Not Specified",
+        Location: u.user_location_address || "Not Specified",
+        Institution: u.user_highest_institution_name || "Not Specified",
+        "Graduation Year": u.user_highest_graduation_year || "Not Specified",
+        "Account Cretated": u.user_creation_date
+          ? new Date(u.user_creation_date.seconds * 1000).toLocaleDateString(
+              "en-GB",
+              { day: "2-digit", month: "short", year: "numeric" }
+            )
+          : "",
+        "User Device": u.user_devices[0] || "Not Specified",
       }));
 
       // 2. Convert mapped users to worksheet
@@ -112,7 +120,7 @@ export const UsersPanel = () => {
       const data = new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      saveAs(data, `users_export_${new Date().toISOString()}.xlsx`);
+      saveAs(data, `users_export.xlsx`);
     } catch (error) {
       console.error("Error exporting users:", error);
     } finally {

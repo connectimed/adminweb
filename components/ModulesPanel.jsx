@@ -7,16 +7,11 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
-const userTypes = [
-  { label: "All Modules", value: "All" },
-  { label: "Students", value: "Student" },
-  { label: "Mentors", value: "Mentor" },
-  { label: "Admins", value: "Admin" },
-];
-const genderTypes = [
-  { label: "All Genders", value: "All" },
-  { label: "Male", value: "Male" },
-  { label: "Female", value: "Female" },
+const moduleTypes = [{ label: "All Modules", value: "All" }];
+const sortTypes = [
+  { label: "Time Created", value: "Time" },
+  { label: "Students Count", value: "Students" },
+  { label: "Topics Count", value: "Topics" },
 ];
 
 export const ModulesPanel = () => {
@@ -24,14 +19,14 @@ export const ModulesPanel = () => {
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState("All");
   const [selectedGender, setSelectedGender] = useState("All");
-  const [users, setUsers] = useState([]);
+  const [modules, setModules] = useState([]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchModules = async () => {
       setLoading(true);
 
       try {
-        const usersCollection = collection(db, "Users");
+        const usersCollection = collection(db, "Modules");
 
         // Build arrays for 'in' queries
         const typesArray =
@@ -46,9 +41,9 @@ export const ModulesPanel = () => {
 
         // Construct query
         const usersQuery = query(
-          usersCollection,
-          where("user_type", "in", typesArray),
-          where("user_sex", "in", genderArray)
+          usersCollection
+          // where("user_type", "in", typesArray),
+          // where("user_sex", "in", genderArray)
         );
 
         const querySnapshot = await getDocs(usersQuery);
@@ -57,49 +52,47 @@ export const ModulesPanel = () => {
           ...doc.data(),
         }));
 
-        setUsers(usersData);
+        setModules(usersData);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching modules:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchModules();
   }, [selectedType, selectedGender]);
 
-  const downloadUsers = () => {
-    if (!users || users.length === 0) {
-      alert("No users to download");
+  const downloadModules = () => {
+    if (!modules || modules.length === 0) {
+      alert("No modules to download");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Map users to only the required fields
-      const mappedUsers = users.map((u) => ({
-        "Full Name": u.user_full_name || "",
-        "User Type": u.user_type || "",
-        "Phone Number": u.user_phone || "",
-        Sex: u.user_sex || "",
-        "Birth Date": u.user_birth_date
-          ? new Date(u.user_birth_date.seconds * 1000).toLocaleDateString(
+      // 1. Map modules to only the required fields
+      const mappedModules = modules.map((u) => ({
+        Title: u.module_title || "",
+        Description: u.module_description || "",
+        "Created By": u.module_poster_name || "",
+        "Created Date": u.module_posted_time
+          ? new Date(u.module_posted_time.seconds * 1000).toLocaleDateString(
               "en-GB",
               { day: "2-digit", month: "short", year: "numeric" }
             )
           : "",
-        "Marital Status": u.user_marital_status || "",
-        Region: u.user_region || "",
-        District: u.user_district || "",
+        Students: u.module_enrolled_student_ids.length || "",
+        Topics: u.module_topics_count || "",
       }));
 
-      // 2. Convert mapped users to worksheet
-      const worksheet = XLSX.utils.json_to_sheet(mappedUsers);
+      // 2. Convert mapped modules to worksheet
+      const worksheet = XLSX.utils.json_to_sheet(mappedModules);
 
       // 3. Create a workbook and append worksheet
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Modules");
 
       // 4. Write workbook to binary
       const excelBuffer = XLSX.write(workbook, {
@@ -111,9 +104,9 @@ export const ModulesPanel = () => {
       const data = new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      saveAs(data, `users_export_${new Date().toISOString()}.xlsx`);
+      saveAs(data, `modules_export.xlsx`);
     } catch (error) {
-      console.error("Error exporting users:", error);
+      console.error("Error exporting modules:", error);
     } finally {
       setLoading(false);
     }
@@ -130,7 +123,7 @@ export const ModulesPanel = () => {
         </div>
         <div
           className="bg-white p-1 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer"
-          onClick={downloadUsers} // Toggle edit on click
+          onClick={downloadModules} // Toggle edit on click
         >
           <ArrowDownTrayIcon className="h-4 w-4" />
         </div>
@@ -140,10 +133,10 @@ export const ModulesPanel = () => {
 
       <div className="mt-2">
         <span className="text-sm font-medium text-gray-700">
-          Select user type
+          Select module type
         </span>
         <div className="mt-1 flex flex-wrap gap-2">
-          {userTypes.map((type) => (
+          {moduleTypes.map((type) => (
             <button
               key={type.value}
               type="button"
@@ -163,10 +156,10 @@ export const ModulesPanel = () => {
 
       <div className="mt-2">
         <span className="text-sm font-medium text-gray-700">
-          Select gender type
+          Sort modules by
         </span>
         <div className="mt-1 flex flex-wrap gap-2">
-          {genderTypes.map((type) => (
+          {sortTypes.map((type) => (
             <button
               key={type.value}
               type="button"
@@ -188,7 +181,7 @@ export const ModulesPanel = () => {
         <InformationCircleIcon className="h-5 w-5" />
 
         <p className=" text-black text-sm tracking-wide font-light">
-          You are about to export {users.length} users.
+          You are about to export {modules.length} modules.
         </p>
       </div>
     </div>
