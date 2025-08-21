@@ -7,26 +7,26 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 
-const moduleTypes = [{ label: "All Exams", value: "All" }];
-const sortTypes = [
-  { label: "Time Created", value: "Time" },
-  { label: "Questions Count", value: "Students" },
-  { label: "Examinee Count", value: "Topics" },
+const moduleTypes = [
+  { label: "Exams → Students", value: "Exams" },
+  { label: "Students → Exams", value: "Students" },
 ];
+const sortTypes = [{ label: "Date Created", value: "Time" }];
 
 export const ExaminationsPanel = () => {
   const { userData, logOut } = UserAuth();
   const [loading, setLoading] = useState(false);
-  const [selectedType, setSelectedType] = useState("All");
-  const [selectedGender, setSelectedGender] = useState("All");
+  const [selectedType, setSelectedType] = useState("Exams");
+  const [selectedGender, setSelectedGender] = useState("Time");
   const [exams, setExams] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const fetchModules = async () => {
       setLoading(true);
 
       try {
-        const usersCollection = collection(db, "Modules");
+        const modulesCollection = collection(db, "Modules");
 
         // Build arrays for 'in' queries
         const typesArray =
@@ -41,8 +41,40 @@ export const ExaminationsPanel = () => {
 
         // Construct query
         const usersQuery = query(
-          usersCollection,
+          modulesCollection,
           where("module_has_exam", "==", true)
+          // where("user_sex", "in", genderArray)
+        );
+
+        const querySnapshot = await getDocs(usersQuery);
+        const examsData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setExams(examsData);
+      } catch (error) {
+        console.error("Error fetching exams:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchUsers = async () => {
+      setLoading(true);
+
+      try {
+        const usersCollection = collection(db, "Users");
+
+        const genderArray =
+          selectedGender && selectedGender !== "All"
+            ? [selectedGender]
+            : ["Male", "Female"]; // all genders
+
+        // Construct query
+        const usersQuery = query(
+          usersCollection,
+          where("user_type", "==", "Student")
           // where("user_sex", "in", genderArray)
         );
 
@@ -52,7 +84,7 @@ export const ExaminationsPanel = () => {
           ...doc.data(),
         }));
 
-        setExams(usersData);
+        setUsers(usersData);
       } catch (error) {
         console.error("Error fetching exams:", error);
       } finally {
@@ -60,8 +92,20 @@ export const ExaminationsPanel = () => {
       }
     };
 
-    fetchModules();
+    if (selectedType == "Exams") {
+      fetchModules();
+    } else {
+      fetchUsers();
+    }
   }, [selectedType, selectedGender]);
+
+  const downloadData = () => {
+    if (selectedType == "Exams") {
+      downloadModules();
+    } else {
+      downloadUsers();
+    }
+  };
 
   const downloadModules = () => {
     if (!exams || exams.length === 0) {
@@ -115,6 +159,72 @@ export const ExaminationsPanel = () => {
     }
   };
 
+  const downloadUsers = () => {
+    if (!users || users.length === 0) {
+      alert("No users to download");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // exam metadata
+      const exams = [
+        { id: "PzqpMOe6eQea5C9Sj398", name: "Personal Development" },
+        { id: "Jhp1MqkBltfYWhdcf5es", name: "Personal Effectiveness" },
+        { id: "TVwAxIGwRIjrfHCG1KzQ", name: "Entrepreneurship" },
+      ];
+
+      const mappedUsers = users.map((u) => {
+        let row = {
+          "Student's name": u.user_full_name || "",
+          "Student's phone": u.user_phone || "",
+          "Registration Date": u.user_creation_date
+            ? new Date(u.user_creation_date.seconds * 1000).toLocaleDateString(
+                "en-GB",
+                { day: "2-digit", month: "short", year: "numeric" }
+              )
+            : "",
+        };
+
+        // add exams dynamically
+        exams.forEach((exam, index) => {
+          const score = u.user_exams?.[exam.id]; // check if student has exam
+          row[`Exam ${index + 1}`] = exam.name;
+          row[`Has Taken Exam ${index + 1}`] =
+            score !== undefined ? "Yes" : "No";
+          row[`Exam ${index + 1} Score`] =
+            score !== undefined ? Math.min(score, 100) : "";
+        });
+
+        return row;
+      });
+
+      // Convert mapped users to worksheet
+      const worksheet = XLSX.utils.json_to_sheet(mappedUsers);
+
+      // Create workbook and append sheet
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+      // Write workbook
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+
+      // Save file
+      const data = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(data, `users_exams_export.xlsx`);
+    } catch (error) {
+      console.error("Error exporting users to exams:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="px-4 py-2 rounded-2xl bg-gray-300 tracking-wide">
       <div className="flex justify-between items-center">
@@ -126,7 +236,7 @@ export const ExaminationsPanel = () => {
         </div>
         <div
           className="bg-white p-1 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer"
-          onClick={downloadModules} // Toggle edit on click
+          onClick={downloadData} // Toggle edit on click
         >
           <ArrowDownTrayIcon className="h-4 w-4" />
         </div>
@@ -136,7 +246,7 @@ export const ExaminationsPanel = () => {
 
       <div className="mt-2">
         <span className="text-sm font-medium text-gray-700">
-          Select examination type
+          Select base entity
         </span>
         <div className="mt-1 flex flex-wrap gap-2">
           {moduleTypes.map((type) => (
@@ -158,7 +268,7 @@ export const ExaminationsPanel = () => {
       </div>
 
       <div className="mt-2">
-        <span className="text-sm font-medium text-gray-700">Sort exams by</span>
+        <span className="text-sm font-medium text-gray-700">Sort data by</span>
         <div className="mt-1 flex flex-wrap gap-2">
           {sortTypes.map((type) => (
             <button
@@ -182,7 +292,9 @@ export const ExaminationsPanel = () => {
         <InformationCircleIcon className="h-5 w-5" />
 
         <p className=" text-black text-sm tracking-wide font-light">
-          You are about to export {exams.length} exams.
+          {selectedType == "Exams"
+            ? `You are about to export ${exams.length} exams.`
+            : `You are about to export ${users.length} examinee.`}
         </p>
       </div>
     </div>
