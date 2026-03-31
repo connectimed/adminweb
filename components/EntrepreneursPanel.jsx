@@ -1,4 +1,3 @@
-"use client";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import React, { useEffect, useMemo, useState } from "react";
@@ -151,8 +150,8 @@ export const EntrepreneursPanel = () => {
           </p>
         </div>
         <div
-          className="bg-white p-1 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer"
-          onClick={downloadUsers}
+          className={`bg-white p-1 w-10 h-10 rounded-full flex items-center justify-center ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          onClick={!loading ? downloadUsers : undefined}
         >
           <ArrowDownTrayIcon className="h-4 w-4" />
         </div>
@@ -205,7 +204,7 @@ export const EntrepreneursPanel = () => {
       <div className="flex flex-row items-center border border-slate-400 mt-6 rounded-lg px-2 py-2 space-x-3 mb-4">
         <InformationCircleIcon className="h-5 w-5" />
         <p className="text-black text-sm tracking-wide font-light">
-          You are about to export {filteredUsers.length} entrepreneurs.
+          {loading ? "Loading..." : `You are about to export ${filteredUsers.length} entrepreneurs.`}
         </p>
       </div>
     </div>
