@@ -9,7 +9,7 @@ const RingLoader = () => {
         src="/images/loading.svg"
         height={512}
         width={512}
-        alt="loading icon"
+        alt="loading icon to spin"
       />
     </div>
   );
